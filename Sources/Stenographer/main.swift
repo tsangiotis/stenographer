@@ -7,8 +7,10 @@ import os
 
 let log = Logger(subsystem: "com.tsangiotis.stenographer", category: "audio")
 
-// ponytail: Greek only; add a language menu when English meetings need it
-let meetingLocale = Locale(identifier: "el_GR")
+// Picked in the menu; `-language en_US` on the command line overrides it (UserDefaults argument domain).
+// ponytail: one language per recording; dictation can't detect the language, run two transcribers if meetings mix
+let languages = [("Greek", "el_GR"), ("English", "en_US")]
+var meetingLocale: Locale { Locale(identifier: UserDefaults.standard.string(forKey: "language") ?? "el_GR") }
 
 struct Line { let start: Double; let who: String; let text: String }
 
@@ -65,6 +67,7 @@ final class Channel {
 
     init(who: String, speakers: Speakers? = nil, onLine: @escaping (Line) -> Void) async throws {
         let locale = await DictationTranscriber.supportedLocale(equivalentTo: meetingLocale) ?? meetingLocale
+        log.notice("\(who, privacy: .public) transcribing \(locale.identifier, privacy: .public)")
         let transcriber = DictationTranscriber(locale: locale, contentHints: [], transcriptionOptions: [.punctuation],
                                                reportingOptions: [], attributeOptions: [.audioTimeRange])
         if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
@@ -297,8 +300,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let menu = NSMenu()
+        menu.autoenablesItems = false // render() enables items itself
         menu.addItem(toggle)
         menu.addItem(NSMenuItem(title: "Open Notes", action: #selector(openNotes), keyEquivalent: ""))
+        menu.addItem(.separator())
+        for (name, id) in languages {
+            let language = NSMenuItem(title: name, action: #selector(pickLanguage), keyEquivalent: "")
+            language.representedObject = id
+            menu.addItem(language)
+        }
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate), keyEquivalent: "q"))
         item.menu = menu
@@ -315,6 +325,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Stenographer")
         toggle.title = recording == nil ? "Start Recording" : "Stop Recording"
         toggle.isEnabled = !busy
+        for language in item.menu?.items ?? [] where language.action == #selector(pickLanguage) {
+            language.state = language.representedObject as? String == meetingLocale.identifier ? .on : .off
+            // The language is fixed when a recording starts.
+            language.isEnabled = recording == nil && !busy
+        }
+    }
+
+    @objc private func pickLanguage(_ sender: NSMenuItem) {
+        UserDefaults.standard.set(sender.representedObject as? String, forKey: "language")
+        render()
     }
 
     @objc private func toggleRecording() {
