@@ -69,7 +69,8 @@ final class Channel {
         let locale = await DictationTranscriber.supportedLocale(equivalentTo: meetingLocale) ?? meetingLocale
         log.notice("\(who, privacy: .public) transcribing \(locale.identifier, privacy: .public)")
         let transcriber = DictationTranscriber(locale: locale, contentHints: [], transcriptionOptions: [.punctuation],
-                                               reportingOptions: [], attributeOptions: [.audioTimeRange])
+                                               // English otherwise holds every line until Stop; Greek is unaffected.
+                                               reportingOptions: [.frequentFinalization], attributeOptions: [.audioTimeRange])
         if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
             try await request.downloadAndInstall()
         }
