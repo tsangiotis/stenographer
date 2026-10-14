@@ -100,7 +100,8 @@ final class Channel {
             peak = 0
         }
         speakers?.feed(buffer)
-        if converter == nil {
+        // Rebuilt when the format changes, e.g. the mic restarting with a different channel count.
+        if converter?.inputFormat != buffer.format {
             converter = AVAudioConverter(from: buffer.format, to: format)
             // ponytail: first channel only; voice-processed mic arrives as 9 channels with the voice on 0,
             // and the left channel of system audio is enough for speech
@@ -207,6 +208,7 @@ final class Recording {
     private let engine = AVAudioEngine()
     private let system = SystemAudio()
     private var channels: [Channel] = []
+    private var configurationObserver: NSObjectProtocol?
 
     func start() async throws {
         let clock = ContinuousClock.now
@@ -225,13 +227,25 @@ final class Recording {
         // Echo cancellation, so the other side playing through speakers isn't transcribed as "Me".
         try? mic.setVoiceProcessingEnabled(true)
         mic.voiceProcessingOtherAudioDuckingConfiguration = .init(enableAdvancedDucking: false, duckingLevel: .min)
-        mic.installTap(onBus: 0, bufferSize: 4096, format: mic.outputFormat(forBus: 0)) { buffer, _ in me.feed(buffer) }
-        try engine.start()
+        let startMic = { [engine] in
+            mic.removeTap(onBus: 0)
+            mic.installTap(onBus: 0, bufferSize: 4096, format: mic.outputFormat(forBus: 0)) { buffer, _ in me.feed(buffer) }
+            try engine.start()
+        }
+        try startMic()
         try system.start { them.feed($0) }
+        // The engine stops itself whenever the audio setup changes, which happens right after start (voice processing
+        // and the system-audio device settling) and when headphones come and go. Bring the mic back each time.
+        configurationObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange,
+                                                                       object: engine, queue: .main) { _ in
+            log.notice("Audio configuration changed, restarting mic")
+            do { try startMic() } catch { log.error("Restarting mic failed: \(error, privacy: .public)") }
+        }
         log.notice("Recording started after \(ContinuousClock.now - clock, privacy: .public)")
     }
 
     func stop() async {
+        if let configurationObserver { NotificationCenter.default.removeObserver(configurationObserver) }
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         system.stop()
