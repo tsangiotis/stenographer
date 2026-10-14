@@ -17,6 +17,14 @@ Each side is diarized, which is a fancy way of saying it tells voices apart. Whe
 
 The note is rewritten after every line, so if something crashes you lose the sentence in progress, not the meeting.
 
+## Privacy
+
+There is no recording. The audio goes from the microphone and the speakers straight into the transcriber and is gone once it has been turned into text; no audio file is ever written to disk. Nothing is sent to a cloud service or an AI model somewhere else either. Both the transcription and the speaker separation run on your Mac, and the only network traffic is the one-time download of the models themselves.
+
+The one thing that exists afterwards is the text, and it lives in Apple Notes like any other note. If you sync Notes with iCloud, the transcript syncs too, so treat it with the same care as the rest of your notes.
+
+Transcribing people is still recording what they say, and in many places you have to tell them, or get their consent, before you do. Let the other participants know at the start of the meeting. This is a practical note, not legal advice; the rules depend on where you and they are, so check what applies to you.
+
 ## Installing
 
 Download `Stenographer.zip` from the [latest release](https://github.com/tsangiotis/stenographer/releases/latest), unzip it and drag `Stenographer.app` to Applications. It needs an Apple Silicon Mac with macOS 26 or later.
