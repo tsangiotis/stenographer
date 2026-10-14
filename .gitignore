@@ -1,2 +1,17 @@
+# SwiftPM / Xcode
 .build/
+.swiftpm/
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+
+# Built app (build.sh)
 Stenographer.app/
+
+# macOS
+.DS_Store
+
+# Agent working files
+.claude/worktrees/
+.claude/settings.local.json
+docs/
