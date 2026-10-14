@@ -116,7 +116,20 @@ final class Channel {
             status.pointee = .haveData
             return buffer
         }
-        if out.frameLength > 0 { input.yield(AnalyzerInput(buffer: out)) }
+        guard out.frameLength > 0 else { return }
+        addNoiseFloor(out)
+        input.yield(AnalyzerInput(buffer: out))
+    }
+
+    /// Dictation drops the first word after near-total silence (digital zeros from system audio, or the echo-cancelled
+    /// mic), but not after room noise. An inaudible ~-50 dB floor keeps the first word of every sentence.
+    private func addNoiseFloor(_ buffer: AVAudioPCMBuffer) {
+        let n = Int(buffer.frameLength)
+        if let samples = buffer.int16ChannelData?[0] {
+            for i in 0..<n { samples[i] = samples[i].addingReportingOverflow(.random(in: -170...170)).partialValue }
+        } else if let samples = buffer.floatChannelData?[0] {
+            for i in 0..<n { samples[i] += .random(in: -0.005...0.005) }
+        }
     }
 
     func finish() async {
@@ -218,8 +231,8 @@ final class Recording {
                 return id of (make new note at folder "Stenographer" with properties {body:\(quoted("<h1>\(escapeHTML(title))</h1>"))})
             end tell
             """)
-        let me = try await Channel(who: "Me", onLine: add)
-        // ponytail: only the far side is diarized; "Me" is already one person
+        // Both sides are diarized: several people can share this Mac's mic too ("Me 1", "Me 2").
+        let me = try await Channel(who: "Me", speakers: try await Speakers(), onLine: add)
         let them = try await Channel(who: "Them", speakers: try await Speakers(), onLine: add)
         channels = [me, them]
 
