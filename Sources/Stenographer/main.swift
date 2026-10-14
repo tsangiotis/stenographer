@@ -12,7 +12,7 @@ let meetingLocale = Locale(identifier: "el_GR")
 
 struct Line { let start: Double; let who: String; let text: String }
 
-/// Tells voices apart on one channel (LS-EEND, up to 10 speakers), so "Them" becomes "Them 1", "Them 2"…
+/// Tells voices apart on one channel (LS-EEND .dihard3, up to 4 speakers), so "Them" becomes "Them 1", "Them 2"…
 final class Speakers {
     private let diarizer: LSEENDDiarizer
     // The model runs here, never on the real-time audio thread.
