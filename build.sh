@@ -6,9 +6,11 @@ rm -rf Stenographer.app
 mkdir -p Stenographer.app/Contents/MacOS
 cp .build/release/Stenographer Stenographer.app/Contents/MacOS/
 cp Info.plist Stenographer.app/Contents/
-# ponytail: ad-hoc signature, so macOS re-asks for permissions after each rebuild; sign with a Developer ID to stop that
-codesign --force -s - Stenographer.app
+# A stable identity keeps mic/audio/Notes permissions across rebuilds; ad-hoc (-s -) re-prompts every build,
+# and the prompt blocks Start behind the hourglass.
+codesign --force -s "Apple Development: Anastasios Sangiotis (NP5X9VJ3S5)" Stenographer.app
 pkill -x Stenographer || true
+sleep 1
 rm -rf /Applications/Stenographer.app
 ditto Stenographer.app /Applications/Stenographer.app
 echo "Installed /Applications/Stenographer.app"

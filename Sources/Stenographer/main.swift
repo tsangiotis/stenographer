@@ -95,7 +95,7 @@ final class Channel {
         }
         frames += Int(buffer.frameLength)
         if Double(frames) > buffer.format.sampleRate * 5 {
-            log.info("\(self.who, privacy: .public) \(buffer.format, privacy: .public) peak=\(self.peak, privacy: .public)")
+            log.notice("\(self.who, privacy: .public) \(buffer.format, privacy: .public) peak=\(self.peak, privacy: .public)")
             frames = 0
             peak = 0
         }
@@ -209,6 +209,7 @@ final class Recording {
     private var channels: [Channel] = []
 
     func start() async throws {
+        let clock = ContinuousClock.now
         noteID = try appleScript("""
             tell application "Notes"
                 if not (exists folder "Stenographer") then make new folder with properties {name:"Stenographer"}
@@ -227,6 +228,7 @@ final class Recording {
         mic.installTap(onBus: 0, bufferSize: 4096, format: mic.outputFormat(forBus: 0)) { buffer, _ in me.feed(buffer) }
         try engine.start()
         try system.start { them.feed($0) }
+        log.notice("Recording started after \(ContinuousClock.now - clock, privacy: .public)")
     }
 
     func stop() async {
